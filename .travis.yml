@@ -1,30 +1,38 @@
-language: java
-
-jdk:
-  - oraclejdk8
-
-addons:
-  apt:
-    packages:
-      - oracle-java8-installer # Updates JDK 8 to the latest available.
-
 after_success:
-  - .buildscript/deploy_snapshot.sh
-
-env:
-  global:
-    - secure: "gpdzVacMwUxhoHU1Ettfowgx0axV/L12bjoR8O4iKbRskE3Wr8AgM2GXmFMjoMVDr7vy45YhtOatuSlSKkwZRfgNIcAcTv8axjaFFt7xnPozXXPTU+pkIfaw5DnHzCwJlOo29mmY767Hz4CLomJi8znqKl5VguPAqXo/I8BqKwc="
-    - secure: "YMh3xjsPik4U9DORSFzyTlGMTGc5kXMeuhyu0/757g7fhG4fgwcuCFMm0hBJTUtBu5dV8Ao3EDqZj/hC7muiy7MODHPd3C/Q3LXolZViPVvu6cqaYFN4NGZpZY/fnxF7tz59lODE+OhvomI0RJHS34MdUDscnCAdYWjdkgmH8Y4="
-
+- .buildscript/deploy_snapshot.sh
+before_cache:
+- rm -rf $HOME/CACHE; find $TRAVIS_BUILD_DIR -name .ekstazi | while read line; do
+  du -sh $line;         DIR=$(dirname $HOME/CACHE$line); mkdir -p $DIR; cp -r $line
+  $DIR; done
+- echo CACHESIZE $(du -sk $HOME/CACHE)
+before_install:
+- find $HOME/CACHE -name .ekstazi | while read line; do du -sh $line;         DIR=$(dirname
+  ${line#$HOME/CACHE}); if [[ -d ${DIR#.ekstazi/} ]]; then cp -r $line $DIR; fi; done
+before_script:
+- find $TRAVIS_BUILD_DIR -name .ekstazi | while read line; do rm -rf $line; done
+- find $HOME/CACHE -name .ekstazi | while read line; do du -sh $line;         DIR=$(dirname
+  ${line#$HOME/CACHE}); if [[ -d ${DIR#.ekstazi/} ]]; then cp -r $line $DIR; fi; done
 branches:
   except:
-    - gh-pages
-
-notifications:
-  email: false
-
-sudo: false
-
+  - gh-pages
 cache:
   directories:
-    - $HOME/.m2
+  - $HOME/.m2
+  - $HOME/CACHE
+env:
+  global:
+  - secure: gpdzVacMwUxhoHU1Ettfowgx0axV/L12bjoR8O4iKbRskE3Wr8AgM2GXmFMjoMVDr7vy45YhtOatuSlSKkwZRfgNIcAcTv8axjaFFt7xnPozXXPTU+pkIfaw5DnHzCwJlOo29mmY767Hz4CLomJi8znqKl5VguPAqXo/I8BqKwc=
+  - secure: YMh3xjsPik4U9DORSFzyTlGMTGc5kXMeuhyu0/757g7fhG4fgwcuCFMm0hBJTUtBu5dV8Ao3EDqZj/hC7muiy7MODHPd3C/Q3LXolZViPVvu6cqaYFN4NGZpZY/fnxF7tz59lODE+OhvomI0RJHS34MdUDscnCAdYWjdkgmH8Y4=
+jdk:
+- oraclejdk8
+language: java
+script:
+- touch NOW
+- echo GIBSTUDYSTART $(date)
+- mvn test -B
+- echo GIBSTUDYEND $(date)
+- cd $TRAVIS_BUILD_DIR
+- if [ "$TRAVIS_OS_NAME" == "osx" ];        then echo TESTNUM $(find . -name TEST-*.xml
+  -newer NOW | wc -l);        else echo TESTNUM $(find -name TEST-*.xml -newer NOW
+  | wc -l);        fi
+sudo: false

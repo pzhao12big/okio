@@ -1,40 +1,6 @@
 Change Log
 ==========
 
-## Version 1.13.0
-
-_2017-05-12_
-
- * **Okio now uses `@Nullable` to annotate all possibly-null values.** We've
-   added a compile-time dependency on the JSR 305 annotations. This is a
-   [provided][maven_provided] dependency and does not need to be included in
-   your build configuration, `.jar` file, or `.apk`. We use
-   `@ParametersAreNonnullByDefault` and all parameters and return types are
-   never null unless explicitly annotated `@Nullable`.
-
- * **Warning: this release is source-incompatible for Kotlin users.**
-   Nullability was previously ambiguous and lenient but now the compiler will
-   enforce strict null checks.
-
-
-## Version 1.12.0
-
-_2017-04-11_
-
- * **Fix: Change Pipe's sink.flush() to not block.** Previously closing a pipe's
-   sink would block until the source had been exhausted. In practice this
-   blocked the caller for no benefit.
- * **Fix: Change `writeUtf8CodePoint()` to emit `?` for partial surrogates.**
-   The previous behavior was inconsistent: given a malformed string with a
-   partial surrogate, `writeUtf8()` emitted `?` but `writeUtf8CodePoint()` threw
-   an `IllegalArgumentException`. Most applications will never encounter partial
-   surrogates, but for those that do this behavior was unexpected.
- * New: Allow length of `readUtf8LineStrict()` to be limited.
- * New: `Utf8.size()` method to get the number of bytes required to encode a
-   string as UTF-8. This may be useful for length-prefixed encodings.
- * New: SHA-512 hash and HMAC APIs.
-
-
 ## Version 1.11.0
 
 _2016-10-11_
@@ -263,6 +229,3 @@ _2014-04-08_
 
  * Initial public release.
  * Imported from OkHttp.
-
-
- [maven_provided]: https://maven.apache.org/guides/introduction/introduction-to-dependency-mechanism.html

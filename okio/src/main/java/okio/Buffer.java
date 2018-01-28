@@ -26,7 +26,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import javax.annotation.Nullable;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -53,7 +52,7 @@ public final class Buffer implements BufferedSource, BufferedSink, Cloneable {
       { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
   static final int REPLACEMENT_CHARACTER = '\ufffd';
 
-  @Nullable Segment head;
+  Segment head;
   long size;
 
   public Buffer() {
@@ -632,7 +631,7 @@ public final class Buffer implements BufferedSource, BufferedSink, Cloneable {
     return result;
   }
 
-  @Override public @Nullable String readUtf8Line() throws EOFException {
+  @Override public String readUtf8Line() throws EOFException {
     long newline = indexOf((byte) '\n');
 
     if (newline == -1) {
@@ -643,22 +642,14 @@ public final class Buffer implements BufferedSource, BufferedSink, Cloneable {
   }
 
   @Override public String readUtf8LineStrict() throws EOFException {
-    return readUtf8LineStrict(Long.MAX_VALUE);
-  }
-
-  @Override public String readUtf8LineStrict(long limit) throws EOFException {
-    if (limit < 0) throw new IllegalArgumentException("limit < 0: " + limit);
-    long scanLength = limit == Long.MAX_VALUE ? Long.MAX_VALUE : limit + 1;
-    long newline = indexOf((byte) '\n', 0, scanLength);
-    if (newline != -1) return readUtf8Line(newline);
-    if (scanLength < size()
-        && getByte(scanLength - 1) == '\r' && getByte(scanLength) == '\n') {
-      return readUtf8Line(scanLength); // The line was 'limit' UTF-8 bytes followed by \r\n.
+    long newline = indexOf((byte) '\n');
+    if (newline == -1) {
+      Buffer data = new Buffer();
+      copyTo(data, 0, Math.min(32, size));
+      throw new EOFException("\\n not found: size=" + size()
+          + " content=" + data.readByteString().hex() + "…");
     }
-    Buffer data = new Buffer();
-    copyTo(data, 0, Math.min(32, size()));
-    throw new EOFException("\\n not found: limit=" + Math.min(size(), limit)
-        + " content=" + data.readByteString().hex() + '…');
+    return readUtf8Line(newline);
   }
 
   String readUtf8Line(long newline) throws EOFException {
@@ -844,7 +835,7 @@ public final class Buffer implements BufferedSource, BufferedSink, Cloneable {
 
   @Override public Buffer writeUtf8(String string, int beginIndex, int endIndex) {
     if (string == null) throw new IllegalArgumentException("string == null");
-    if (beginIndex < 0) throw new IllegalArgumentException("beginIndex < 0: " + beginIndex);
+    if (beginIndex < 0) throw new IllegalAccessError("beginIndex < 0: " + beginIndex);
     if (endIndex < beginIndex) {
       throw new IllegalArgumentException("endIndex < beginIndex: " + endIndex + " < " + beginIndex);
     }
@@ -930,14 +921,14 @@ public final class Buffer implements BufferedSource, BufferedSink, Cloneable {
 
     } else if (codePoint < 0x10000) {
       if (codePoint >= 0xd800 && codePoint <= 0xdfff) {
-        // Emit a replacement character for a partial surrogate.
-        writeByte('?');
-      } else {
-        // Emit a 16-bit code point with 3 bytes.
-        writeByte(codePoint >> 12        | 0xe0); // 1110xxxx
-        writeByte(codePoint >>  6 & 0x3f | 0x80); // 10xxxxxx
-        writeByte(codePoint       & 0x3f | 0x80); // 10xxxxxx
+        throw new IllegalArgumentException(
+            "Unexpected code point: " + Integer.toHexString(codePoint));
       }
+
+      // Emit a 16-bit code point with 3 bytes.
+      writeByte(codePoint >> 12        | 0xe0); // 1110xxxx
+      writeByte(codePoint >>  6 & 0x3f | 0x80); // 10xxxxxx
+      writeByte(codePoint       & 0x3f | 0x80); // 10xxxxxx
 
     } else if (codePoint <= 0x10ffff) {
       // Emit a 21-bit code point with 4 bytes.
@@ -1272,7 +1263,7 @@ public final class Buffer implements BufferedSource, BufferedSink, Cloneable {
   }
 
   @Override public long indexOf(byte b) {
-    return indexOf(b, 0, Long.MAX_VALUE);
+    return indexOf(b, 0);
   }
 
   /**
@@ -1280,17 +1271,7 @@ public final class Buffer implements BufferedSource, BufferedSink, Cloneable {
    * -1 if this buffer does not contain {@code b} in that range.
    */
   @Override public long indexOf(byte b, long fromIndex) {
-    return indexOf(b, fromIndex, Long.MAX_VALUE);
-  }
-
-  @Override public long indexOf(byte b, long fromIndex, long toIndex) {
-    if (fromIndex < 0 || toIndex < fromIndex) {
-      throw new IllegalArgumentException(
-          String.format("size=%s fromIndex=%s toIndex=%s", size, fromIndex, toIndex));
-    }
-
-    if (toIndex > size) toIndex = size;
-    if (fromIndex == toIndex) return -1L;
+    if (fromIndex < 0) throw new IllegalArgumentException("fromIndex < 0");
 
     Segment s;
     long offset;
@@ -1320,11 +1301,9 @@ public final class Buffer implements BufferedSource, BufferedSink, Cloneable {
     }
 
     // Scan through the segments, searching for b.
-    while (offset < toIndex) {
+    while (offset < size) {
       byte[] data = s.data;
-      int limit = (int) Math.min(s.limit, s.pos + toIndex - offset);
-      int pos = (int) (s.pos + fromIndex - offset);
-      for (; pos < limit; pos++) {
+      for (int pos = (int) (s.pos + fromIndex - offset), limit = s.limit; pos < limit; pos++) {
         if (data[pos] == b) {
           return pos - s.pos + offset;
         }
@@ -1479,8 +1458,7 @@ public final class Buffer implements BufferedSource, BufferedSink, Cloneable {
     return rangeEquals(offset, bytes, 0, bytes.size());
   }
 
-  @Override public boolean rangeEquals(
-      long offset, ByteString bytes, int bytesOffset, int byteCount) {
+  @Override public boolean rangeEquals(long offset, ByteString bytes, int bytesOffset, int byteCount) {
     if (offset < 0
         || bytesOffset < 0
         || byteCount < 0
@@ -1560,11 +1538,6 @@ public final class Buffer implements BufferedSource, BufferedSink, Cloneable {
     return digest("SHA-256");
   }
 
-  /** Returns the 512-bit SHA-512 hash of this buffer. */
-  public ByteString sha512() {
-      return digest("SHA-512");
-  }
-
   private ByteString digest(String algorithm) {
     try {
       MessageDigest messageDigest = MessageDigest.getInstance(algorithm);
@@ -1588,11 +1561,6 @@ public final class Buffer implements BufferedSource, BufferedSink, Cloneable {
   /** Returns the 256-bit SHA-256 HMAC of this buffer. */
   public ByteString hmacSha256(ByteString key) {
     return hmac("HmacSHA256", key);
-  }
-
-  /** Returns the 512-bit SHA-512 HMAC of this buffer. */
-  public ByteString hmacSha512(ByteString key) {
-      return hmac("HmacSHA512", key);
   }
 
   private ByteString hmac(String algorithm, ByteString key) {

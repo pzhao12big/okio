@@ -15,8 +15,6 @@
  */
 package okio;
 
-import javax.annotation.Nullable;
-
 /**
  * A segment of a buffer.
  *
@@ -82,7 +80,7 @@ final class Segment {
    * Removes this segment of a circularly-linked list and returns its successor.
    * Returns null if the list is now empty.
    */
-  public @Nullable Segment pop() {
+  public Segment pop() {
     Segment result = next != this ? next : null;
     prev.next = next;
     next.prev = prev;

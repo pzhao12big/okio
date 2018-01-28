@@ -90,54 +90,7 @@ public final class ReadUtf8LineTest {
       source.readUtf8LineStrict();
       fail();
     } catch (EOFException expected) {
-      assertEquals("\\n not found: limit=0 content=…", expected.getMessage());
-    }
-  }
-
-  @Test public void readUtf8LineStrictWithLimits() throws IOException {
-    int[] lens = {1, Segment.SIZE - 2, Segment.SIZE - 1, Segment.SIZE, Segment.SIZE * 10};
-    for (int len : lens) {
-      data.writeUtf8(TestUtil.repeat('a', len)).writeUtf8("\n");
-      assertEquals(len, source.readUtf8LineStrict(len).length());
-      source.readUtf8();
-
-      data.writeUtf8(TestUtil.repeat('a', len)).writeUtf8("\n").writeUtf8(TestUtil.repeat('a', len));
-      assertEquals(len, source.readUtf8LineStrict(len).length());
-      source.readUtf8();
-
-      data.writeUtf8(TestUtil.repeat('a', len)).writeUtf8("\r\n");
-      assertEquals(len, source.readUtf8LineStrict(len).length());
-      source.readUtf8();
-
-      data.writeUtf8(TestUtil.repeat('a', len)).writeUtf8("\r\n").writeUtf8(TestUtil.repeat('a', len));
-      assertEquals(len, source.readUtf8LineStrict(len).length());
-      source.readUtf8();
-    }
-  }
-
-  @Test public void readUtf8LineStrictNoBytesConsumedOnFailure() throws IOException {
-    data.writeUtf8("abc\n");
-    try {
-      source.readUtf8LineStrict(2);
-      fail();
-    } catch (EOFException expected) {
-      assertTrue(expected.getMessage().startsWith("\\n not found: limit=2 content=61626"));
-    }
-    assertEquals("abc", source.readUtf8LineStrict(3));
-  }
-
-  @Test public void readUtf8LineStrictEmptyString() throws IOException {
-    data.writeUtf8("\r\nabc");
-    assertEquals("", source.readUtf8LineStrict(0));
-    assertEquals("abc", source.readUtf8());
-  }
-
-  @Test public void readUtf8LineStrictNonPositive() throws IOException {
-    data.writeUtf8("\r\n");
-    try {
-      source.readUtf8LineStrict(-1);
-      fail("Expected failure: limit must be greater than 0");
-    } catch (IllegalArgumentException expected) {
+      assertEquals("\\n not found: size=0 content=…", expected.getMessage());
     }
   }
 
@@ -147,35 +100,8 @@ public final class ReadUtf8LineTest {
       source.readUtf8LineStrict();
       fail();
     } catch (EOFException expected) {
-      assertEquals("\\n not found: limit=33 content=616161616161616162626262626262626363636363636363"
+      assertEquals("\\n not found: size=33 content=616161616161616162626262626262626363636363636363"
           + "6464646464646464…", expected.getMessage());
-    }
-  }
-
-  @Test public void newlineAtEnd() throws IOException {
-    data.writeUtf8("abc\n");
-    assertEquals("abc", source.readUtf8LineStrict(3));
-    assertTrue(source.exhausted());
-
-    data.writeUtf8("abc\r\n");
-    assertEquals("abc", source.readUtf8LineStrict(3));
-    assertTrue(source.exhausted());
-
-    data.writeUtf8("abc\r");
-    try {
-      source.readUtf8LineStrict(3);
-      fail();
-    } catch (EOFException expected) {
-      assertEquals("\\n not found: limit=3 content=6162630d…", expected.getMessage());
-    }
-    source.readUtf8();
-
-    data.writeUtf8("abc");
-    try {
-      source.readUtf8LineStrict(3);
-      fail();
-    } catch (EOFException expected) {
-      assertEquals("\\n not found: limit=3 content=616263…", expected.getMessage());
     }
   }
 

@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import javax.annotation.Nullable;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -42,8 +41,8 @@ import static okio.Util.checkOffsetAndCount;
  * }</pre>
  */
 public final class HashingSink extends ForwardingSink {
-  private final @Nullable MessageDigest messageDigest;
-  private final @Nullable Mac mac;
+  private final MessageDigest messageDigest;
+  private final Mac mac;
 
   /** Returns a sink that uses the obsolete MD5 hash algorithm to produce 128-bit hashes. */
   public static HashingSink md5(Sink sink) {
@@ -60,11 +59,6 @@ public final class HashingSink extends ForwardingSink {
     return new HashingSink(sink, "SHA-256");
   }
 
-  /** Returns a sink that uses the SHA-512 hash algorithm to produce 512-bit hashes. */
-  public static HashingSink sha512(Sink sink) {
-    return new HashingSink(sink, "SHA-512");
-  }
-
   /** Returns a sink that uses the obsolete SHA-1 HMAC algorithm to produce 160-bit hashes. */
   public static HashingSink hmacSha1(Sink sink, ByteString key) {
     return new HashingSink(sink, key, "HmacSHA1");
@@ -73,11 +67,6 @@ public final class HashingSink extends ForwardingSink {
   /** Returns a sink that uses the SHA-256 HMAC algorithm to produce 256-bit hashes. */
   public static HashingSink hmacSha256(Sink sink, ByteString key) {
     return new HashingSink(sink, key, "HmacSHA256");
-  }
-
-  /** Returns a sink that uses the SHA-512 HMAC algorithm to produce 512-bit hashes. */
-  public static HashingSink hmacSha512(Sink sink, ByteString key) {
-    return new HashingSink(sink, key, "HmacSHA512");
   }
 
   private HashingSink(Sink sink, String algorithm) {

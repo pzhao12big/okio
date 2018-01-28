@@ -83,16 +83,23 @@ public final class Pipe {
     @Override public void flush() throws IOException {
       synchronized (buffer) {
         if (sinkClosed) throw new IllegalStateException("closed");
-        if (sourceClosed && buffer.size() > 0) throw new IOException("source is closed");
+
+        while (buffer.size() > 0) {
+          if (sourceClosed) throw new IOException("source is closed");
+          timeout.waitUntilNotified(buffer);
+        }
       }
     }
 
     @Override public void close() throws IOException {
       synchronized (buffer) {
         if (sinkClosed) return;
-        if (sourceClosed && buffer.size() > 0) throw new IOException("source is closed");
-        sinkClosed = true;
-        buffer.notifyAll(); // Notify the source that no more bytes are coming.
+        try {
+          flush();
+        } finally {
+          sinkClosed = true;
+          buffer.notifyAll(); // Notify the source that no more bytes are coming.
+        }
       }
     }
 
