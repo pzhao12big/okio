@@ -15,8 +15,6 @@
  */
 package okio;
 
-import javax.annotation.Nullable;
-
 /**
  * A collection of unused segments, necessary to avoid GC churn and zero-fill.
  * This pool is a thread-safe static singleton.
@@ -27,7 +25,7 @@ final class SegmentPool {
   static final long MAX_SIZE = 64 * 1024; // 64 KiB.
 
   /** Singly-linked list of segments. */
-  static @Nullable Segment next;
+  static Segment next;
 
   /** Total bytes in this pool. */
   static long byteCount;

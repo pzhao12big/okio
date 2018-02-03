@@ -18,7 +18,6 @@ package okio;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
-import javax.annotation.Nullable;
 
 /**
  * A source that keeps a buffer internally so that callers can do small reads without a performance
@@ -379,7 +378,7 @@ public interface BufferedSource extends Source {
    * break is assumed. Null is returned once the source is exhausted. Use this for human-generated
    * data, where a trailing line break is optional.
    */
-  @Nullable String readUtf8Line() throws IOException;
+  String readUtf8Line() throws IOException;
 
   /**
    * Removes and returns characters up to but not including the next line break. A line break is
@@ -391,30 +390,6 @@ public interface BufferedSource extends Source {
    * input.
    */
   String readUtf8LineStrict() throws IOException;
-
-  /**
-   * Like {@link #readUtf8LineStrict()}, except this allows the caller to specify the longest
-   * allowed match. Use this to protect against streams that may not include
-   * {@code "\n"} or {@code "\r\n"}.
-   *
-   * <p>The returned string will have at most {@code limit} UTF-8 bytes, and the maximum number
-   * of bytes scanned is {@code limit + 2}. If {@code limit == 0} this will always throw
-   * an {@code EOFException} because no bytes will be scanned.
-   *
-   * <p>This method is safe. No bytes are discarded if the match fails, and the caller is free
-   * to try another match: <pre>{@code
-   *
-   *   Buffer buffer = new Buffer();
-   *   buffer.writeUtf8("12345\r\n");
-   *
-   *   // This will throw! There must be \r\n or \n at the limit or before it.
-   *   buffer.readUtf8LineStrict(4);
-   *
-   *   // No bytes have been consumed so the caller can retry.
-   *   assertEquals("12345", buffer.readUtf8LineStrict(5));
-   * }</pre>
-   */
-  String readUtf8LineStrict(long limit) throws IOException;
 
   /**
    * Removes and returns a single UTF-8 code point, reading between 1 and 4 bytes as necessary.
@@ -457,16 +432,6 @@ public interface BufferedSource extends Source {
    * }</pre>
    */
   long indexOf(byte b, long fromIndex) throws IOException;
-
-  /**
-   * Returns the index of {@code b} if it is found in the range of {@code fromIndex} inclusive
-   * to {@code toIndex} exclusive. If {@code b} isn't found, or if {@code fromIndex == toIndex},
-   * then -1 is returned.
-   *
-   * <p>The scan terminates at either {@code toIndex} or the end of the buffer, whichever comes
-   * first. The maximum number of bytes scanned is {@code toIndex-fromIndex}.
-   */
-  long indexOf(byte b, long fromIndex, long toIndex) throws IOException;
 
   /** Equivalent to {@link #indexOf(ByteString, long) indexOf(bytes, 0)}. */
   long indexOf(ByteString bytes) throws IOException;

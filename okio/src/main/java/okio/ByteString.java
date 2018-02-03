@@ -29,7 +29,6 @@ import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-import javax.annotation.Nullable;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -146,11 +145,6 @@ public class ByteString implements Serializable, Comparable<ByteString> {
     return digest("SHA-256");
   }
 
-  /** Returns the 512-bit SHA-512 hash of this byte string. */
-  public ByteString sha512() {
-    return digest("SHA-512");
-  }
-
   private ByteString digest(String algorithm) {
     try {
       return ByteString.of(MessageDigest.getInstance(algorithm).digest(data));
@@ -167,11 +161,6 @@ public class ByteString implements Serializable, Comparable<ByteString> {
   /** Returns the 256-bit SHA-256 HMAC of this byte string. */
   public ByteString hmacSha256(ByteString key) {
     return hmac("HmacSHA256", key);
-  }
-
-  /** Returns the 512-bit SHA-512 HMAC of this byte string. */
-  public ByteString hmacSha512(ByteString key) {
-    return hmac("HmacSHA512", key);
   }
 
   private ByteString hmac(String algorithm, ByteString key) {
@@ -198,7 +187,7 @@ public class ByteString implements Serializable, Comparable<ByteString> {
    * Decodes the Base64-encoded bytes and returns their value as a byte string.
    * Returns null if {@code base64} is not a Base64-encoded sequence of bytes.
    */
-  public static @Nullable ByteString decodeBase64(String base64) {
+  public static ByteString decodeBase64(String base64) {
     if (base64 == null) throw new IllegalArgumentException("base64 == null");
     byte[] decoded = Base64.decode(base64);
     return decoded != null ? new ByteString(decoded) : null;

@@ -261,7 +261,6 @@ public final class ByteStringTest {
     assertEquals(3, byteString.lastIndexOf(ByteString.decodeHex("").toByteArray()));
   }
 
-  @SuppressWarnings("SelfEquals")
   @Test public void equals() throws Exception {
     ByteString byteString = factory.decodeHex("000102");
     assertTrue(byteString.equals(byteString));

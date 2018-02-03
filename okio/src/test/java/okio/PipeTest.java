@@ -26,9 +26,8 @@ import java.util.concurrent.TimeUnit;
 import org.junit.After;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assert.assertEquals;
 
 public final class PipeTest {
   final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(2);
@@ -201,36 +200,85 @@ public final class PipeTest {
     }
   }
 
-  @Test public void sinkFlushDoesntWaitForReader() throws Exception {
-    Pipe pipe = new Pipe(100L);
-    pipe.sink().write(new Buffer().writeUtf8("abc"), 3);
-    pipe.sink().flush();
+  @Test public void sinkFlushWaitsForReaderToReadEverything() throws Exception {
+    final Buffer readBuffer = new Buffer();
+    final Pipe pipe = new Pipe(100L);
+    executorService.execute(new Runnable() {
+      @Override public void run() {
+        try {
+          Thread.sleep(1000);
+          pipe.source().read(readBuffer, 3);
+          Thread.sleep(1000);
+          pipe.source().read(readBuffer, 3);
+        } catch (InterruptedException | IOException e) {
+          throw new AssertionError(e);
+        }
+      }
+    });
 
-    BufferedSource bufferedSource = Okio.buffer(pipe.source());
-    assertEquals("abc", bufferedSource.readUtf8(3));
+    double start = now();
+    pipe.sink().write(new Buffer().writeUtf8("abcdef"), 6);
+    pipe.sink().flush();
+    assertElapsed(2000.0, start);
+    assertEquals("abcdef", readBuffer.readUtf8());
   }
 
   @Test public void sinkFlushFailsIfReaderIsClosedBeforeAllDataIsRead() throws Exception {
-    Pipe pipe = new Pipe(100L);
-    pipe.sink().write(new Buffer().writeUtf8("abc"), 3);
-    pipe.source().close();
+    final Pipe pipe = new Pipe(100L);
+    executorService.execute(new Runnable() {
+      @Override public void run() {
+        try {
+          Thread.sleep(1000);
+          pipe.source().read(new Buffer(), 3);
+          Thread.sleep(1000);
+          pipe.source().close();
+        } catch (InterruptedException | IOException e) {
+          throw new AssertionError(e);
+        }
+      }
+    });
+
+    double start = now();
+    pipe.sink().write(new Buffer().writeUtf8("abcdef"), 6);
     try {
       pipe.sink().flush();
       fail();
     } catch (IOException expected) {
       assertEquals("source is closed", expected.getMessage());
+      assertElapsed(2000.0, start);
     }
   }
 
   @Test public void sinkCloseFailsIfReaderIsClosedBeforeAllDataIsRead() throws Exception {
-    Pipe pipe = new Pipe(100L);
-    pipe.sink().write(new Buffer().writeUtf8("abc"), 3);
-    pipe.source().close();
+    final Pipe pipe = new Pipe(100L);
+    executorService.execute(new Runnable() {
+      @Override public void run() {
+        try {
+          Thread.sleep(1000);
+          pipe.source().read(new Buffer(), 3);
+          Thread.sleep(1000);
+          pipe.source().close();
+        } catch (InterruptedException | IOException e) {
+          throw new AssertionError(e);
+        }
+      }
+    });
+
+    double start = now();
+    pipe.sink().write(new Buffer().writeUtf8("abcdef"), 6);
     try {
       pipe.sink().close();
       fail();
     } catch (IOException expected) {
       assertEquals("source is closed", expected.getMessage());
+      assertElapsed(2000.0, start);
+    }
+
+    try {
+      pipe.sink().flush();
+      fail();
+    } catch (IllegalStateException expected) {
+      assertEquals("closed", expected.getMessage());
     }
   }
 
@@ -255,16 +303,6 @@ public final class PipeTest {
     Pipe pipe = new Pipe(100L);
     pipe.sink().close();
     pipe.sink().close();
-  }
-
-  @Test public void sinkCloseDoesntWaitForSourceRead() throws Exception {
-    Pipe pipe = new Pipe(100L);
-    pipe.sink().write(new Buffer().writeUtf8("abc"), 3);
-    pipe.sink().close();
-
-    BufferedSource bufferedSource = Okio.buffer(pipe.source());
-    assertEquals("abc", bufferedSource.readUtf8());
-    assertTrue(bufferedSource.exhausted());
   }
 
   @Test public void sourceClose() throws Exception {

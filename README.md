@@ -1,7 +1,7 @@
 Okio
 ====
 
-Okio is a library that complements `java.io` and `java.nio` to make it much
+Okio is a new library that complements `java.io` and `java.nio` to make it much
 easier to access, store, and process your data.
 
 ByteStrings and Buffers
@@ -78,25 +78,27 @@ Decoding the chunks of a PNG file demonstrates Okio in practice.
 private static final ByteString PNG_HEADER = ByteString.decodeHex("89504e470d0a1a0a");
 
 public void decodePng(InputStream in) throws IOException {
-  try (BufferedSource pngSource = Okio.buffer(Okio.source(in))) {
-    ByteString header = pngSource.readByteString(PNG_HEADER.size());
-    if (!header.equals(PNG_HEADER)) {
-      throw new IOException("Not a PNG.");
-    }
+  BufferedSource pngSource = Okio.buffer(Okio.source(in));
 
-    while (true) {
-      Buffer chunk = new Buffer();
-
-      // Each chunk is a length, type, data, and CRC offset.
-      int length = pngSource.readInt();
-      String type = pngSource.readUtf8(4);
-      pngSource.readFully(chunk, length);
-      int crc = pngSource.readInt();
-
-      decodeChunk(type, chunk);
-      if (type.equals("IEND")) break;
-    }
+  ByteString header = pngSource.readByteString(PNG_HEADER.size());
+  if (!header.equals(PNG_HEADER)) {
+    throw new IOException("Not a PNG.");
   }
+
+  while (true) {
+    Buffer chunk = new Buffer();
+
+    // Each chunk is a length, type, data, and CRC offset.
+    int length = pngSource.readInt();
+    String type = pngSource.readUtf8(4);
+    pngSource.readFully(chunk, length);
+    int crc = pngSource.readInt();
+
+    decodeChunk(type, chunk);
+    if (type.equals("IEND")) break;
+  }
+
+  pngSource.close();
 }
 
 private void decodeChunk(String type, Buffer chunk) {
@@ -118,12 +120,12 @@ Download [the latest JAR][2] or grab via Maven:
 <dependency>
     <groupId>com.squareup.okio</groupId>
     <artifactId>okio</artifactId>
-    <version>1.13.0</version>
+    <version>1.11.0</version>
 </dependency>
 ```
 or Gradle:
 ```groovy
-compile 'com.squareup.okio:okio:1.13.0'
+compile 'com.squareup.okio:okio:1.11.0'
 ```
 
 Snapshots of the development version are available in [Sonatype's `snapshots` repository][snap].

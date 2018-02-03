@@ -69,18 +69,6 @@ public final class Utf8Test {
     assertStringEncoded("3fee8080", "\ud800\ue000"); // "?\ue000": Following character is too high.
   }
 
-  @Test public void doubleLowSurrogate() throws Exception {
-    assertStringEncoded("3f3f", "\udc00\udc00"); // "??"
-  }
-
-  @Test public void doubleHighSurrogate() throws Exception {
-    assertStringEncoded("3f3f", "\ud800\ud800"); // "??"
-  }
-
-  @Test public void highSurrogateLowSurrogate() throws Exception {
-    assertStringEncoded("3f3f", "\udc00\ud800"); // "??"
-  }
-
   @Test public void multipleSegmentString() throws Exception {
     String a = TestUtil.repeat('a', Segment.SIZE + Segment.SIZE + 1);
     Buffer encoded = new Buffer().writeUtf8(a);
@@ -174,55 +162,25 @@ public final class Utf8Test {
   }
 
   @Test public void writeSurrogateCodePoint() throws Exception {
-    assertStringEncoded("ed9fbf", "\ud7ff"); // Below lowest surrogate is okay.
-    assertStringEncoded("3f", "\ud800"); // Lowest surrogate gets '?'.
-    assertStringEncoded("3f", "\udfff"); // Highest surrogate gets '?'.
-    assertStringEncoded("ee8080", "\ue000"); // Above highest surrogate is okay.
+    Buffer buffer = new Buffer();
+    buffer.writeUtf8CodePoint(0xd7ff); // Below lowest surrogate is okay.
+    try {
+      buffer.writeUtf8CodePoint(0xd800); // Lowest surrogate throws.
+      fail();
+    } catch (IllegalArgumentException expected) {
+    }
+    try {
+      buffer.writeUtf8CodePoint(0xdfff); // Highest surrogate throws.
+      fail();
+    } catch (IllegalArgumentException expected) {
+    }
+    buffer.writeUtf8CodePoint(0xe000); // Above highest surrogate is okay.
   }
 
   @Test public void writeCodePointBeyondUnicodeMaximum() throws Exception {
     Buffer buffer = new Buffer();
     try {
       buffer.writeUtf8CodePoint(0x110000);
-      fail();
-    } catch (IllegalArgumentException expected) {
-    }
-  }
-
-  @Test public void size() throws Exception {
-    assertEquals(0, Utf8.size(""));
-    assertEquals(3, Utf8.size("abc"));
-    assertEquals(16, Utf8.size("təˈranəˌsôr"));
-  }
-
-  @Test public void sizeWithBounds() throws Exception {
-    assertEquals(0, Utf8.size("", 0, 0));
-    assertEquals(0, Utf8.size("abc", 0, 0));
-    assertEquals(1, Utf8.size("abc", 1, 2));
-    assertEquals(2, Utf8.size("abc", 0, 2));
-    assertEquals(3, Utf8.size("abc", 0, 3));
-    assertEquals(16, Utf8.size("təˈranəˌsôr", 0, 11));
-    assertEquals(5, Utf8.size("təˈranəˌsôr", 3, 7));
-  }
-
-  @Test public void sizeBoundsCheck() throws Exception {
-    try {
-      Utf8.size(null, 0, 0);
-      fail();
-    } catch (IllegalArgumentException expected) {
-    }
-    try {
-      Utf8.size("abc", -1, 2);
-      fail();
-    } catch (IllegalArgumentException expected) {
-    }
-    try {
-      Utf8.size("abc", 2, 1);
-      fail();
-    } catch (IllegalArgumentException expected) {
-    }
-    try {
-      Utf8.size("abc", 1, 4);
       fail();
     } catch (IllegalArgumentException expected) {
     }
@@ -260,18 +218,5 @@ public final class Utf8Test {
     // Confirm our implementation matches those expectations.
     ByteString actualUtf8 = new Buffer().writeUtf8(string).readByteString();
     assertEquals(expectedUtf8, actualUtf8);
-
-    // Confirm we are consistent when writing one code point at a time.
-    Buffer bufferUtf8 = new Buffer();
-    for (int i = 0; i < string.length(); ) {
-      int c = string.codePointAt(i);
-      bufferUtf8.writeUtf8CodePoint(c);
-      i += Character.charCount(c);
-    }
-    assertEquals(expectedUtf8, bufferUtf8.readByteString());
-
-    // Confirm we are consistent when measuring lengths.
-    assertEquals(expectedUtf8.size(), Utf8.size(string));
-    assertEquals(expectedUtf8.size(), Utf8.size(string, 0, string.length()));
   }
 }
